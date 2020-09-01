@@ -8,6 +8,7 @@
 #' @import shinydashboard
 #' @import DALEX
 #' @importFrom shinycssloaders withSpinner
+#' @importFrom shinyWidgets checkboxGroupButtons
 #' @importFrom whisker whisker.render
 #' @importFrom readr read_file
 #' @examples
