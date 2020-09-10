@@ -5,9 +5,9 @@
 \title{Title}
 \usage{
 create_shimex(
-  explainer,
-  chosen_observation,
-  directory,
+  ...,
+  chosen_observation = NULL,
+  directory = NULL,
   selected_variables = NULL
 )
 }

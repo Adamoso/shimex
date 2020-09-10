@@ -6,13 +6,32 @@ library(shinyWidgets)
 library(DALEX)
 library(ggplot2)
 
-data <- explainer$data
+{{{explainers_static}}}
+
+data <- explainer1$data
+
 chosen_observation <- data[1,-8]
+
+dropdownActionMenu <- function (..., title=NULL, icon = NULL, .list = NULL, header=NULL) {
+  items <- c(list(...), .list)
+  lapply(items, shinydashboard:::tagAssert, type = "li")
+  type <- "notifications"
+  dropdownClass <- paste0("dropdown ", type, "-menu")
+  tags$li(class = dropdownClass, a(href = "#", class = "dropdown-toggle",
+                                   `data-toggle` = "dropdown", icon, title), tags$ul(class = "dropdown-menu",
+                                                                                     if(!is.null(header)) tags$li(class="header",header),
+                                                                                     tags$li(tags$ul(class = "menu", items))))
+}
+
 
 ui <- dashboardPage(
     skin = "purple",
     dashboardHeader(title = strong("shimex"),
-                    dropdownMenuOutput("messageMenu")),
+                    dropdownActionMenu(title="Chosen explainer",
+                                       icon = icon("arrow-circle-down")
+                                       {{{buttons}}}
+                    )
+                    ),
     dashboardSidebar(
         sidebarMenu(
             menuItem(p(id = "menu1", "Model exploration"),
@@ -51,7 +70,7 @@ ui <- dashboardPage(
                         column(width = 4,
                                column(width = 12,
                                     box(title = p(id = "tab1", "Prediction"),
-                                        background = "blue", solidHeader = TRUE,
+                                        background = "purple", solidHeader = TRUE,
                                         collapsible = TRUE, width = 800,
                                         height = 100,
                                         withSpinner(uiOutput("textPred"),hide.ui = FALSE)),
@@ -72,7 +91,7 @@ ui <- dashboardPage(
                                           selected = "break_down"),
                               withSpinner(plotOutput("bdPlot", height = 400),hide.ui = FALSE)),
                           box(title = p(id = "tab4", "Predict Profile"),
-                              background = "blue", solidHeader = TRUE,
+                              background = "purple", solidHeader = TRUE,
                               collapsible = TRUE, width = 4,
                               height = 550,
                               uiOutput("cpvariable"),
@@ -82,7 +101,7 @@ ui <- dashboardPage(
                         hidden(
                           div(id = "global",
                             box(title = p(id = "tab5", "Model Parts"),
-                                background = "purple", solidHeader = TRUE,
+                                background = "blue", solidHeader = TRUE,
                                 collapsible = TRUE, width = 6,
                                 height = 350,
                                 withSpinner(plotOutput("fiPlot", height = 260), hide.ui = FALSE)),
@@ -116,8 +135,11 @@ server <- function(input, output, session) {
       as.data.frame(obs)
     })
 
+    exp <- reactiveValues(data = explainer1)
+    {{{explainers_reactive}}}
+
     pred <- reactive({
-        predict(explainer, new_observation())
+        predict(exp$data, new_observation())
     })
 
     output$textPred <- renderUI({
@@ -125,11 +147,11 @@ server <- function(input, output, session) {
     })
 
     pp <- reactive({
-        predict_parts(explainer, new_observation(), type = input$pptype)
+        predict_parts(exp$data, new_observation(), type = input$pptype)
     })
 
     cp <- reactive({
-        predict_profile(explainer, new_observation(), input$cp1)
+        predict_profile(exp$data, new_observation(), input$cp1)
     })
 
     # plot
@@ -142,17 +164,17 @@ server <- function(input, output, session) {
     })
 
     output$modelPerf <- renderPlot({
-        perf <- model_performance(explainer)
+        perf <- model_performance(exp$data)
         plot(perf, geom = "roc")
     })
 
     output$fiPlot <- renderPlot({
-        mp <- model_parts(explainer)
+        mp <- model_parts(exp$data)
         plot(mp)
     })
 
     output$pdpPlot <- renderPlot({
-        pdp <- model_profile(explainer, variables = input$pdp1)
+        pdp <- model_profile(exp$data, variables = input$pdp1)
         plot(pdp)
     })
 

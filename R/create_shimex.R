@@ -12,7 +12,12 @@
 #' @importFrom whisker whisker.render
 #' @importFrom readr read_file
 #' @examples
-create_shimex <- function(explainer, chosen_observation, directory, selected_variables = NULL) {
+create_shimex <- function(..., chosen_observation = NULL, directory = NULL, selected_variables = NULL) {
+
+  args <- list(..., version=1.0)
+  options <- args[names(args) != ""]
+
+  explainers <- args[names(args) == ""]
 
   path_to_template <- system.file("templates", "default_template.txt", package="shimex")
   template <- readr::read_file(path_to_template)
@@ -21,7 +26,7 @@ create_shimex <- function(explainer, chosen_observation, directory, selected_var
   directory <- file.path(directory, 'shimex')
   if(!dir.exists(directory)) dir.create(directory)
 
-  data <- explainer$data
+  data <- explainers[[1]]$data
 
   cols1 <- paste0("'",colnames(data), "'")
   cols2 <- paste(cols1, sep="", collapse = ",")
@@ -39,10 +44,27 @@ create_shimex <- function(explainer, chosen_observation, directory, selected_var
 
   obs <- .create_observation(data)
 
+  buttons <- ''
+  explainers_reactive <- ''
+  explainers_static <- ''
+  for(i in 1:length(explainers)){
+    saveRDS(explainers[[i]], file = paste0(directory,"/exp",i,".rds"))
+    button <- paste0('tags$li(class = "dropdown", actionBttn("exp',
+                            i,'", explainer',i,'$label, style = "fill", block = TRUE))')
+    buttons <- paste0(buttons, ",", button)
+    explainer_reactive <- paste0('observeEvent(input$exp',i,',{exp$data <- explainer',i,'})')
+    explainers_reactive <- paste0(explainers_reactive, "\n\t", explainer_reactive)
+    explainer_static <- paste0('explainer',i,' <- readRDS("exp',i,'.rds")')
+    explainers_static <- paste0(explainers_static, "\n", explainer_static)
+  }
+
   template_data <- list(obs = obs,
                         cols = cols,
+                        explainers_static = explainers_static,
                         selected_variables = selected_variables,
-                        chosen_observation = chosen_observation)
+                        chosen_observation = chosen_observation,
+                        explainers_reactive = explainers_reactive,
+                        buttons = buttons)
 
   text_to_file <- whisker::whisker.render(template, template_data)
 
